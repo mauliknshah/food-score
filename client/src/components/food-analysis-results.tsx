@@ -168,7 +168,7 @@ export function FoodAnalysisResults({
                 top: `${item.position.y}%`,
                 transform: 'translate(-50%, -50%)',
                 backgroundColor: 'transparent',
-                border: `3px solid ${getDietaryColor(item.dietary_classification)}`,
+                border: 'none',
                 borderRadius: '8px',
               }}
               onClick={() => setSelectedItem(selectedItem?.name === item.name ? null : item)}
