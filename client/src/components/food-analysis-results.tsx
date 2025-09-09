@@ -21,13 +21,13 @@ export function FoodAnalysisResults({
   const getDietaryColor = (classification: string) => {
     switch (classification) {
       case "vegan":
-        return "hsl(var(--vegan))";
+        return "#00AA00"; // Bright green
       case "vegetarian":
-        return "hsl(var(--vegetarian))";
+        return "#AAFF00"; // Bright lime
       case "meat":
-        return "hsl(var(--meat))";
+        return "#FF0000"; // Bright red
       default:
-        return "hsl(var(--muted))";
+        return "#888888"; // Gray for unknown
     }
   };
 
