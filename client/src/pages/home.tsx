@@ -78,24 +78,6 @@ export default function Home() {
           <ImageUploadZone onImageSelect={handleImageSelect} />
         )}
 
-        {/* Legend Section */}
-        <div className="bg-card rounded-lg shadow-sm border border-border p-4 mb-6">
-          <h3 className="text-sm font-semibold text-foreground mb-3">Dietary Classification</h3>
-          <div className="flex flex-wrap gap-4">
-            <div className="flex items-center space-x-2">
-              <div className="w-4 h-4 rounded-full" style={{ backgroundColor: "hsl(var(--vegan))" }}></div>
-              <span className="text-sm text-foreground">Vegan</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <div className="w-4 h-4 rounded-full" style={{ backgroundColor: "hsl(var(--vegetarian))" }}></div>
-              <span className="text-sm text-foreground">Vegetarian</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <div className="w-4 h-4 rounded-full" style={{ backgroundColor: "hsl(var(--meat))" }}></div>
-              <span className="text-sm text-foreground">Contains Meat</span>
-            </div>
-          </div>
-        </div>
 
         {/* Loading State */}
         {analyzeImageMutation.isPending && <LoadingState />}
