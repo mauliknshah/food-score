@@ -167,7 +167,7 @@ export function FoodAnalysisResults({
                 left: `${item.position.x}%`,
                 top: `${item.position.y}%`,
                 transform: 'translate(-50%, -50%)',
-                backgroundColor: `${getDietaryColor(item.dietary_classification)}15`,
+                backgroundColor: 'transparent',
                 border: `3px solid ${getDietaryColor(item.dietary_classification)}`,
                 borderRadius: '8px',
               }}
