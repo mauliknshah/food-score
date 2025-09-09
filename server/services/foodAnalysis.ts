@@ -76,7 +76,16 @@ Be accurate with dietary classifications:
       if (!textContent || textContent.type !== 'text') {
         throw new Error("No text content in response");
       }
-      const result = JSON.parse(textContent.text || "{}");
+      
+      // Clean the response text to handle markdown code blocks
+      let cleanText = textContent.text || "{}";
+      
+      // Remove markdown code block markers if present
+      cleanText = cleanText.replace(/^```json\s*\n?/i, '');
+      cleanText = cleanText.replace(/\n?```\s*$/i, '');
+      cleanText = cleanText.trim();
+      
+      const result = JSON.parse(cleanText);
       
       // Validate and structure the response
       const foodItems: FoodItem[] = (result.food_items || []).map((item: any) => ({
