@@ -34,9 +34,9 @@ export function FoodAnalysisResults({
   const getDietaryDescription = (classification: string) => {
     switch (classification) {
       case "vegan":
-        return "Vegan friendly";
+        return "Vegan";
       case "vegetarian":
-        return "Vegetarian friendly";
+        return "Vegetarian";
       case "meat":
         return "Contains meat ingredients";
       default:
