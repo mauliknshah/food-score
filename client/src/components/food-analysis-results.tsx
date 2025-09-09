@@ -162,22 +162,24 @@ export function FoodAnalysisResults({
           return (
             <div
               key={index}
-              className="absolute food-badge rounded-lg px-3 py-2 shadow-lg cursor-pointer hover:scale-105 transition-transform"
+              className="absolute rounded-lg px-3 py-2 shadow-lg cursor-pointer hover:scale-105 transition-transform backdrop-blur-sm"
               style={{
                 left: `${item.position.x}%`,
                 top: `${item.position.y}%`,
                 transform: 'translate(-50%, -50%)',
-                border: `2px solid ${getDietaryColor(item.dietary_classification)}`,
+                backgroundColor: `${getDietaryColor(item.dietary_classification)}15`,
+                border: `3px solid ${getDietaryColor(item.dietary_classification)}`,
+                borderRadius: '8px',
               }}
               onClick={() => setSelectedItem(selectedItem?.name === item.name ? null : item)}
               data-testid={`food-label-${index}`}
             >
               <div className="flex items-center space-x-2">
                 <div
-                  className="w-3 h-3 rounded-full"
+                  className="w-4 h-4 rounded-full border-2 border-white"
                   style={{ backgroundColor: getDietaryColor(item.dietary_classification) }}
                 ></div>
-                <span className="text-sm font-medium text-foreground">{item.name}</span>
+                <span className="text-sm font-bold text-gray-800">{item.name}</span>
               </div>
             </div>
           );

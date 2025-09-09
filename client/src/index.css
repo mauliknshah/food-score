@@ -39,9 +39,9 @@
   --font-serif: Georgia, serif;
   --font-mono: Menlo, monospace;
   --radius: 0.5rem;
-  --vegan: hsl(120, 100%, 25%);
-  --vegetarian: hsl(75, 100%, 40%);
-  --meat: hsl(0, 100%, 50%);
+  --vegan: hsl(120, 100%, 35%);
+  --vegetarian: hsl(75, 85%, 50%);
+  --meat: hsl(0, 85%, 55%);
   --shadow-2xs: 0px 2px 0px 0px hsl(221.2 83% 53% / 0.00);
   --shadow-xs: 0px 2px 0px 0px hsl(221.2 83% 53% / 0.00);
   --shadow-sm: 0px 2px 0px 0px hsl(221.2 83% 53% / 0.00), 0px 1px 2px -1px hsl(221.2 83% 53% / 0.00);
@@ -74,9 +74,9 @@
   --border: hsl(217.2, 32.6%, 17.5%);
   --input: hsl(217.2, 32.6%, 17.5%);
   --ring: hsl(224.3, 76.3%, 94.1%);
-  --vegan: hsl(120, 100%, 25%);
-  --vegetarian: hsl(75, 100%, 40%);
-  --meat: hsl(0, 100%, 50%);
+  --vegan: hsl(120, 100%, 35%);
+  --vegetarian: hsl(75, 85%, 50%);
+  --meat: hsl(0, 85%, 55%);
 }
 
 @layer base {
@@ -112,6 +112,6 @@
 
 .food-badge {
   backdrop-filter: blur(8px);
-  background: rgba(255, 255, 255, 0.95);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.3);
 }
