@@ -156,20 +156,19 @@ export function FoodAnalysisResults({
         </svg>
         
         {/* Food Labels */}
-        {analysisResult.food_items.slice(0, 4).map((item, index) => {
-          const positions = [
-            { top: "4px", left: "4px" },
-            { top: "4px", right: "4px" },
-            { bottom: "4px", right: "4px" },
-            { bottom: "4px", left: "4px" },
-          ];
-          const position = positions[index] || positions[0];
-
+        {analysisResult.food_items.map((item, index) => {
+          if (!item.position) return null;
+          
           return (
             <div
               key={index}
               className="absolute food-badge rounded-lg px-3 py-2 shadow-lg cursor-pointer hover:scale-105 transition-transform"
-              style={position}
+              style={{
+                left: `${item.position.x}%`,
+                top: `${item.position.y}%`,
+                transform: 'translate(-50%, -50%)',
+                border: `2px solid ${getDietaryColor(item.dietary_classification)}`,
+              }}
               onClick={() => setSelectedItem(selectedItem?.name === item.name ? null : item)}
               data-testid={`food-label-${index}`}
             >
@@ -178,7 +177,7 @@ export function FoodAnalysisResults({
                   className="w-3 h-3 rounded-full"
                   style={{ backgroundColor: getDietaryColor(item.dietary_classification) }}
                 ></div>
-                <span className="text-sm font-medium">{item.name}</span>
+                <span className="text-sm font-medium text-foreground">{item.name}</span>
               </div>
             </div>
           );
