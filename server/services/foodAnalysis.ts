@@ -72,7 +72,11 @@ Be accurate with dietary classifications:
         ],
       });
 
-      const result = JSON.parse(response.content[0].text || "{}");
+      const textContent = response.content.find(block => block.type === 'text');
+      if (!textContent || textContent.type !== 'text') {
+        throw new Error("No text content in response");
+      }
+      const result = JSON.parse(textContent.text || "{}");
       
       // Validate and structure the response
       const foodItems: FoodItem[] = (result.food_items || []).map((item: any) => ({
