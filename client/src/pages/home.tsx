@@ -56,7 +56,7 @@ export default function Home() {
                 <Utensils className="text-primary-foreground" size={20} />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-foreground">FoodScan</h1>
+                <h1 className="text-xl font-bold text-foreground">Food Score</h1>
                 <p className="text-xs text-muted-foreground">AI Meal Recognition</p>
               </div>
             </div>
@@ -115,7 +115,7 @@ export default function Home() {
         <div className="max-w-4xl mx-auto px-4">
           <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
             <div className="flex items-center space-x-4 text-sm text-muted-foreground">
-              <span>© 2024 FoodScan</span>
+              <span>© 2024 Food Score</span>
               <span>•</span>
               <a href="#" className="hover:text-foreground transition-colors">Privacy</a>
               <span>•</span>
