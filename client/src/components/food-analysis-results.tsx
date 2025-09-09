@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Download, Share, RotateCcw, CheckCircle, Sparkles } from "lucide-react";
@@ -17,6 +17,14 @@ export function FoodAnalysisResults({
   onAnalyzeNew 
 }: FoodAnalysisResultsProps) {
   const [selectedItem, setSelectedItem] = useState<FoodItem | null>(null);
+  const [scale, setScale] = useState(1);
+  const [translateX, setTranslateX] = useState(0);
+  const [translateY, setTranslateY] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const [lastTouchDistance, setLastTouchDistance] = useState(0);
+  const [lastTouchCenter, setLastTouchCenter] = useState({ x: 0, y: 0 });
+  const [lastTouchTime, setLastTouchTime] = useState(0);
+  const imageContainerRef = useRef<HTMLDivElement>(null);
 
   const getDietaryColor = (classification: string) => {
     switch (classification) {
@@ -42,6 +50,107 @@ export function FoodAnalysisResults({
       default:
         return "Unknown dietary classification";
     }
+  };
+
+  // Touch and zoom handling functions
+  const getTouchDistance = (touches: React.TouchList) => {
+    if (touches.length < 2) return 0;
+    const touch1 = touches[0];
+    const touch2 = touches[1];
+    return Math.sqrt(
+      Math.pow(touch2.clientX - touch1.clientX, 2) + 
+      Math.pow(touch2.clientY - touch1.clientY, 2)
+    );
+  };
+
+  const getTouchCenter = (touches: React.TouchList) => {
+    if (touches.length < 2) return { x: touches[0].clientX, y: touches[0].clientY };
+    const touch1 = touches[0];
+    const touch2 = touches[1];
+    return {
+      x: (touch1.clientX + touch2.clientX) / 2,
+      y: (touch1.clientY + touch2.clientY) / 2
+    };
+  };
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    const now = Date.now();
+    
+    if (e.touches.length === 1) {
+      // Check for double tap
+      if (now - lastTouchTime < 300) {
+        handleDoubleTap();
+        return;
+      }
+      setLastTouchTime(now);
+      setIsDragging(true);
+      const touch = e.touches[0];
+      setLastTouchCenter({ x: touch.clientX, y: touch.clientY });
+    } else if (e.touches.length === 2) {
+      // Start pinch gesture
+      setIsDragging(false);
+      const distance = getTouchDistance(e.touches);
+      const center = getTouchCenter(e.touches);
+      setLastTouchDistance(distance);
+      setLastTouchCenter(center);
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    e.preventDefault();
+    
+    if (e.touches.length === 1 && isDragging && scale > 1) {
+      // Pan gesture
+      const touch = e.touches[0];
+      const deltaX = touch.clientX - lastTouchCenter.x;
+      const deltaY = touch.clientY - lastTouchCenter.y;
+      
+      setTranslateX(prev => prev + deltaX);
+      setTranslateY(prev => prev + deltaY);
+      setLastTouchCenter({ x: touch.clientX, y: touch.clientY });
+    } else if (e.touches.length === 2) {
+      // Pinch gesture
+      const distance = getTouchDistance(e.touches);
+      const center = getTouchCenter(e.touches);
+      
+      if (lastTouchDistance > 0) {
+        const deltaScale = distance / lastTouchDistance;
+        const newScale = Math.min(5, Math.max(0.5, scale * deltaScale));
+        
+        // Adjust translation to zoom towards touch center
+        const rect = imageContainerRef.current?.getBoundingClientRect();
+        if (rect) {
+          const centerX = center.x - rect.left - rect.width / 2;
+          const centerY = center.y - rect.top - rect.height / 2;
+          
+          setScale(newScale);
+          setTranslateX(prev => prev + centerX * (deltaScale - 1));
+          setTranslateY(prev => prev + centerY * (deltaScale - 1));
+        }
+      }
+      
+      setLastTouchDistance(distance);
+      setLastTouchCenter(center);
+    }
+  };
+
+  const handleTouchEnd = () => {
+    setIsDragging(false);
+    setLastTouchDistance(0);
+  };
+
+  const handleDoubleTap = () => {
+    if (scale === 1) {
+      setScale(2);
+    } else {
+      resetZoom();
+    }
+  };
+
+  const resetZoom = () => {
+    setScale(1);
+    setTranslateX(0);
+    setTranslateY(0);
   };
 
   const handleExportResults = () => {
@@ -116,20 +225,31 @@ export function FoodAnalysisResults({
       </div>
       
       {/* Image with Annotations */}
-      <div className="relative bg-muted">
-        <img 
-          src={imageData} 
-          alt="Analyzed meal plate" 
-          className="w-full h-auto max-h-96 object-contain"
-          data-testid="analyzed-image"
-        />
-        
-        {/* Annotation Overlays */}
-        <svg 
-          className="absolute inset-0 w-full h-full pointer-events-none" 
-          viewBox="0 0 100 100"
-          preserveAspectRatio="none"
+      <div className="relative bg-muted overflow-hidden touch-none" 
+           ref={imageContainerRef}
+           onTouchStart={handleTouchStart}
+           onTouchMove={handleTouchMove}
+           onTouchEnd={handleTouchEnd}>
+        <div
+          className="transition-transform duration-100 ease-out"
+          style={{
+            transform: `scale(${scale}) translate(${translateX / scale}px, ${translateY / scale}px)`,
+            transformOrigin: 'center center'
+          }}
         >
+          <img 
+            src={imageData} 
+            alt="Analyzed meal plate" 
+            className="w-full h-auto max-h-96 object-contain"
+            data-testid="analyzed-image"
+          />
+        
+          {/* Annotation Overlays */}
+          <svg 
+            className="absolute inset-0 w-full h-full pointer-events-none" 
+            viewBox="0 0 100 100"
+            preserveAspectRatio="none"
+          >
           {analysisResult.food_items.map((item, index) => (
             item.position && (
               <g key={index}>
@@ -153,45 +273,58 @@ export function FoodAnalysisResults({
               </g>
             )
           ))}
-        </svg>
+          </svg>
         
-        {/* Food Labels */}
-        {analysisResult.food_items.map((item, index) => {
-          if (!item.position) return null;
-          
-          return (
-            <div
-              key={index}
-              className="absolute rounded-lg px-3 py-2 shadow-lg cursor-pointer hover:scale-105 transition-transform backdrop-blur-sm"
-              style={{
-                left: `${item.position.x}%`,
-                top: `${item.position.y}%`,
-                transform: 'translate(-50%, -50%)',
-                backgroundColor: 'transparent',
-                border: `3px solid ${getDietaryColor(item.dietary_classification)}`,
-                borderRadius: '8px',
-              }}
-              onClick={() => setSelectedItem(selectedItem?.name === item.name ? null : item)}
-              data-testid={`food-label-${index}`}
-            >
-              <div className="flex items-center space-x-2">
-                <div
-                  className="w-4 h-4 rounded-full border-2 border-white"
-                  style={{ backgroundColor: getDietaryColor(item.dietary_classification) }}
-                ></div>
-                <span className="text-sm font-bold text-gray-800">{item.name}</span>
+          {/* Food Labels */}
+          {analysisResult.food_items.map((item, index) => {
+            if (!item.position) return null;
+            
+            return (
+              <div
+                key={index}
+                className="absolute rounded-lg px-3 py-2 shadow-lg cursor-pointer hover:scale-105 transition-transform backdrop-blur-sm"
+                style={{
+                  left: `${item.position.x}%`,
+                  top: `${item.position.y}%`,
+                  transform: 'translate(-50%, -50%)',
+                  backgroundColor: 'transparent',
+                  border: `3px solid ${getDietaryColor(item.dietary_classification)}`,
+                  borderRadius: '8px',
+                }}
+                onClick={() => setSelectedItem(selectedItem?.name === item.name ? null : item)}
+                data-testid={`food-label-${index}`}
+              >
+                <div className="flex items-center space-x-2">
+                  <div
+                    className="w-4 h-4 rounded-full border-2 border-white"
+                    style={{ backgroundColor: getDietaryColor(item.dietary_classification) }}
+                  ></div>
+                  <span className="text-sm font-bold text-gray-800">{item.name}</span>
+                </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
         
-        {/* Confidence indicator */}
+        {/* Confidence indicator and zoom controls */}
         <div className="absolute top-4 left-1/2 transform -translate-x-1/2 food-badge rounded-full px-3 py-1 shadow-lg">
           <div className="flex items-center space-x-1">
             <CheckCircle className="text-green-500" size={12} />
             <span className="text-xs font-medium">{analysisResult.overall_confidence}% Confidence</span>
           </div>
         </div>
+        
+        {scale > 1 && (
+          <Button
+            size="sm"
+            variant="secondary"
+            className="absolute top-4 right-4 bg-black/50 hover:bg-black/70 text-white border-0"
+            onClick={resetZoom}
+            data-testid="button-reset-zoom"
+          >
+            Reset Zoom
+          </Button>
+        )}
       </div>
       
       {/* Detected Items List */}
