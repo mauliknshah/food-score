@@ -190,7 +190,7 @@ export function FoodAnalysisResults({
     
     // Calculate initial position
     let xPixel = leftOffset + (position.x / 100) * displayedWidth;
-    let yPixel = (position.y / 100) * displayedHeight;
+    let yPixel = (position.y / 100) * displayedHeight - 20; // Move labels up by 20px
     
     // Ensure labels stay within image boundaries (with 16px margin for label radius)
     const labelRadius = 16;
