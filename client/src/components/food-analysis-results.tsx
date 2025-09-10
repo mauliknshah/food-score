@@ -171,13 +171,14 @@ export function FoodAnalysisResults({
   };
 
   const getAdjustedPosition = (position: { x: number; y: number }) => {
-    if (imageDisplayDimensions.width === 0 || imageDisplayDimensions.height === 0) {
+    if (!imageRef.current) {
       return { left: `${position.x}%`, top: `${position.y}%` };
     }
 
-    // Convert AI percentage coordinates to actual pixel positions on displayed image
-    const xPixel = (position.x / 100) * imageDisplayDimensions.width;
-    const yPixel = (position.y / 100) * imageDisplayDimensions.height;
+    // Since image now displays at original size, use the natural dimensions for calculation
+    const img = imageRef.current;
+    const xPixel = (position.x / 100) * img.naturalWidth;
+    const yPixel = (position.y / 100) * img.naturalHeight;
 
     return {
       left: `${xPixel}px`,
