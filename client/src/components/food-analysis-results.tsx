@@ -273,7 +273,7 @@ export function FoodAnalysisResults({
             ref={imageRef}
             src={imageData} 
             alt="Analyzed meal plate" 
-            className="w-full h-auto max-h-96 object-contain"
+            className="block"
             onLoad={handleImageLoad}
             data-testid="analyzed-image"
           />
