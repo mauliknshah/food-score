@@ -275,7 +275,7 @@ export function FoodAnalysisResults({
             ref={imageRef}
             src={imageData} 
             alt="Analyzed meal plate" 
-            className="block"
+            className="block mx-auto"
             style={{ width: '67%', height: 'auto' }}
             onLoad={handleImageLoad}
             data-testid="analyzed-image"
