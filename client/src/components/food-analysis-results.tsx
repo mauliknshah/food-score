@@ -350,9 +350,15 @@ export function FoodAnalysisResults({
                 ></div>
                 <div>
                   <p className="text-sm font-medium text-foreground">{item.name}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {getDietaryDescription(item.dietary_classification)}
-                  </p>
+                  <div className="flex items-center space-x-2 text-xs text-muted-foreground">
+                    <span>{getDietaryDescription(item.dietary_classification)}</span>
+                    {item.weight_grams && (
+                      <>
+                        <span>•</span>
+                        <span className="font-medium">{item.weight_grams}g</span>
+                      </>
+                    )}
+                  </div>
                 </div>
               </div>
               <div className="text-right">

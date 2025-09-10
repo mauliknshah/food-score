@@ -4,6 +4,7 @@ export const foodItemSchema = z.object({
   name: z.string(),
   dietary_classification: z.enum(["vegan", "vegetarian", "meat"]),
   confidence: z.number().min(0).max(100),
+  weight_grams: z.number().optional(),
   position: z.object({
     x: z.number(),
     y: z.number(),

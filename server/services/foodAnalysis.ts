@@ -32,7 +32,8 @@ export class FoodAnalysisService {
 1. The specific name of the food item
 2. Dietary classification: "vegan" (plant-based only), "vegetarian" (may contain dairy/eggs but no meat), or "meat" (contains any animal protein)
 3. Confidence score (0-100) for the identification
-4. Approximate position in the image (x,y coordinates as percentages 0-100)
+4. Estimated weight in grams based on typical serving sizes and visual appearance
+5. Approximate position in the image (x,y coordinates as percentages 0-100)
 
 Respond with JSON in this exact format:
 {
@@ -41,6 +42,7 @@ Respond with JSON in this exact format:
       "name": "Food item name",
       "dietary_classification": "vegan|vegetarian|meat",
       "confidence": 95,
+      "weight_grams": 150,
       "position": {"x": 50, "y": 30}
     }
   ],
@@ -94,6 +96,7 @@ Be accurate with dietary classifications:
           ? item.dietary_classification 
           : "vegan",
         confidence: Math.min(100, Math.max(0, item.confidence || 0)),
+        weight_grams: item.weight_grams ? Math.max(1, Math.round(item.weight_grams)) : undefined,
         position: item.position || { x: 50, y: 50 },
       }));
 
