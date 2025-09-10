@@ -282,25 +282,18 @@ export function FoodAnalysisResults({
             return (
               <div
                 key={index}
-                className="absolute rounded-lg px-3 py-2 shadow-lg cursor-pointer hover:scale-105 transition-transform backdrop-blur-sm"
+                className="absolute rounded-full w-8 h-8 shadow-lg cursor-pointer hover:scale-110 transition-transform flex items-center justify-center"
                 style={{
                   left: `${item.position.x}%`,
                   top: `${item.position.y}%`,
                   transform: 'translate(-50%, -50%)',
-                  backgroundColor: 'transparent',
-                  border: `3px solid ${getDietaryColor(item.dietary_classification)}`,
-                  borderRadius: '8px',
+                  backgroundColor: getDietaryColor(item.dietary_classification),
+                  border: '2px solid white',
                 }}
                 onClick={() => setSelectedItem(selectedItem?.name === item.name ? null : item)}
                 data-testid={`food-label-${index}`}
               >
-                <div className="flex items-center space-x-2">
-                  <div
-                    className="w-4 h-4 rounded-full border-2 border-white"
-                    style={{ backgroundColor: getDietaryColor(item.dietary_classification) }}
-                  ></div>
-                  <span className="text-sm font-bold text-gray-800">{item.name}</span>
-                </div>
+                <span className="text-sm font-bold text-white">{index + 1}</span>
               </div>
             );
           })}
@@ -349,7 +342,13 @@ export function FoodAnalysisResults({
                   style={{ backgroundColor: getDietaryColor(item.dietary_classification) }}
                 ></div>
                 <div>
-                  <p className="text-sm font-medium text-foreground">{item.name}</p>
+                  <p className="text-sm font-medium text-foreground">
+                    <span className="inline-flex items-center justify-center w-5 h-5 rounded-full text-xs font-bold text-white mr-2" 
+                          style={{ backgroundColor: getDietaryColor(item.dietary_classification) }}>
+                      {index + 1}
+                    </span>
+                    {item.name}
+                  </p>
                   <div className="flex items-center space-x-2 text-xs text-muted-foreground">
                     <span>{getDietaryDescription(item.dietary_classification)}</span>
                     {item.weight_grams && (
