@@ -369,14 +369,6 @@ export function FoodAnalysisResults({
       <div className="p-4 border-t border-border bg-muted/50">
         <div className="flex flex-col sm:flex-row gap-3">
           <Button
-            className="flex-1 flex items-center justify-center space-x-2"
-            onClick={handleExportResults}
-            data-testid="button-export"
-          >
-            <Download size={16} />
-            <span>Export Results</span>
-          </Button>
-          <Button
             variant="secondary"
             className="flex-1 flex items-center justify-center space-x-2"
             onClick={handleShare}
@@ -386,12 +378,11 @@ export function FoodAnalysisResults({
             <span>Share Analysis</span>
           </Button>
           <Button
-            variant="outline"
-            className="px-4 py-2 flex items-center justify-center space-x-2"
+            className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 flex items-center justify-center space-x-2 text-lg font-medium"
             onClick={onAnalyzeNew}
             data-testid="button-analyze-new"
           >
-            <RotateCcw size={16} />
+            <RotateCcw size={18} />
             <span>Analyze New</span>
           </Button>
         </div>
