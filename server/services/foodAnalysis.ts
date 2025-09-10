@@ -33,7 +33,13 @@ export class FoodAnalysisService {
 2. Dietary classification: "vegan" (plant-based only), "vegetarian" (may contain dairy/eggs but no meat), or "meat" (contains any animal protein)
 3. Confidence score (0-100) for the identification
 4. Estimated weight in grams based on typical serving sizes and visual appearance
-5. Approximate position in the image (x,y coordinates as percentages 0-100)
+5. PRECISE position of the CENTER of each food item in the image (x,y coordinates as percentages 0-100)
+
+IMPORTANT FOR POSITIONING:
+- x=0 is the LEFT edge of the image, x=100 is the RIGHT edge
+- y=0 is the TOP edge of the image, y=100 is the BOTTOM edge
+- Place the coordinates at the CENTER/MIDDLE of each food item
+- Be very accurate with positioning - examine where each food item is actually located
 
 Respond with JSON in this exact format:
 {
@@ -59,7 +65,7 @@ Be accurate with dietary classifications:
             content: [
               {
                 type: "text",
-                text: "Please analyze this meal photo and identify all the food items with their dietary classifications and positions."
+                text: "Please analyze this meal photo and identify all the food items with their dietary classifications. Pay special attention to the EXACT position of each food item - place the coordinates precisely at the center of each item."
               },
               {
                 type: "image",
