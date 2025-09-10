@@ -25,9 +25,6 @@ export function FoodAnalysisResults({
   const [lastTouchCenter, setLastTouchCenter] = useState({ x: 0, y: 0 });
   const [lastTouchTime, setLastTouchTime] = useState(0);
   const imageContainerRef = useRef<HTMLDivElement>(null);
-  const imageRef = useRef<HTMLImageElement>(null);
-  const [imageNaturalDimensions, setImageNaturalDimensions] = useState({ width: 0, height: 0 });
-  const [imageDisplayDimensions, setImageDisplayDimensions] = useState({ width: 0, height: 0 });
 
   const getDietaryColor = (classification: string) => {
     switch (classification) {
@@ -156,35 +153,6 @@ export function FoodAnalysisResults({
     setTranslateY(0);
   };
 
-  const handleImageLoad = () => {
-    if (imageRef.current) {
-      const img = imageRef.current;
-      setImageNaturalDimensions({
-        width: img.naturalWidth,
-        height: img.naturalHeight
-      });
-      setImageDisplayDimensions({
-        width: img.offsetWidth,
-        height: img.offsetHeight
-      });
-    }
-  };
-
-  const getAdjustedPosition = (position: { x: number; y: number }) => {
-    if (imageDisplayDimensions.width === 0 || imageDisplayDimensions.height === 0) {
-      return { left: `${position.x}%`, top: `${position.y}%` };
-    }
-
-    // Convert AI percentage coordinates to actual pixel positions on displayed image
-    const xPixel = (position.x / 100) * imageDisplayDimensions.width;
-    const yPixel = (position.y / 100) * imageDisplayDimensions.height;
-
-    return {
-      left: `${xPixel}px`,
-      top: `${yPixel}px`
-    };
-  };
-
   const handleExportResults = () => {
     const exportData = {
       analysis_date: new Date().toISOString(),
@@ -270,27 +238,54 @@ export function FoodAnalysisResults({
           }}
         >
           <img 
-            ref={imageRef}
             src={imageData} 
             alt="Analyzed meal plate" 
             className="w-full h-auto max-h-96 object-contain"
-            onLoad={handleImageLoad}
             data-testid="analyzed-image"
           />
         
+          {/* Annotation Overlays */}
+          <svg 
+            className="absolute inset-0 w-full h-full pointer-events-none" 
+            viewBox="0 0 100 100"
+            preserveAspectRatio="none"
+          >
+          {analysisResult.food_items.map((item, index) => (
+            item.position && (
+              <g key={index}>
+                {/* Annotation line */}
+                <line
+                  x1={item.position.x}
+                  y1={item.position.y}
+                  x2={item.position.x + (index % 2 === 0 ? -10 : 10)}
+                  y2={item.position.y - 10}
+                  stroke={getDietaryColor(item.dietary_classification)}
+                  strokeWidth="0.5"
+                  strokeDasharray="2,2"
+                />
+                {/* Annotation point */}
+                <circle
+                  cx={item.position.x}
+                  cy={item.position.y}
+                  r="1"
+                  fill={getDietaryColor(item.dietary_classification)}
+                />
+              </g>
+            )
+          ))}
+          </svg>
         
           {/* Food Labels */}
           {analysisResult.food_items.map((item, index) => {
             if (!item.position) return null;
-            
-            const adjustedPosition = getAdjustedPosition(item.position);
             
             return (
               <div
                 key={index}
                 className="absolute rounded-full w-8 h-8 shadow-lg cursor-pointer hover:scale-110 transition-transform flex items-center justify-center"
                 style={{
-                  ...adjustedPosition,
+                  left: `${item.position.x}%`,
+                  top: `${item.position.y}%`,
                   transform: 'translate(-50%, -50%)',
                   backgroundColor: getDietaryColor(item.dietary_classification),
                   border: '2px solid white',
