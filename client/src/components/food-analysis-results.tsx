@@ -171,15 +171,25 @@ export function FoodAnalysisResults({
   };
 
   const getAdjustedPosition = (position: { x: number; y: number }) => {
-    if (!imageRef.current) {
+    if (!imageRef.current || !imageContainerRef.current) {
       return { left: `${position.x}%`, top: `${position.y}%` };
     }
 
-    // Image is scaled to 67% of original size (33% reduction)
+    // Image is scaled to 67% of original size and centered
     const img = imageRef.current;
+    const container = imageContainerRef.current;
     const scaleFactor = 0.67;
-    const xPixel = (position.x / 100) * img.naturalWidth * scaleFactor;
-    const yPixel = (position.y / 100) * img.naturalHeight * scaleFactor;
+    
+    // Calculate the displayed image dimensions
+    const displayedWidth = img.naturalWidth * scaleFactor;
+    const displayedHeight = img.naturalHeight * scaleFactor;
+    
+    // Calculate the offset to center the image horizontally
+    const containerWidth = container.offsetWidth;
+    const leftOffset = (containerWidth - displayedWidth) / 2;
+    
+    const xPixel = leftOffset + (position.x / 100) * displayedWidth;
+    const yPixel = (position.y / 100) * displayedHeight;
 
     return {
       left: `${xPixel}px`,
