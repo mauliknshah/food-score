@@ -175,10 +175,11 @@ export function FoodAnalysisResults({
       return { left: `${position.x}%`, top: `${position.y}%` };
     }
 
-    // Since image now displays at original size, use the natural dimensions for calculation
+    // Image is scaled to 67% of original size (33% reduction)
     const img = imageRef.current;
-    const xPixel = (position.x / 100) * img.naturalWidth;
-    const yPixel = (position.y / 100) * img.naturalHeight;
+    const scaleFactor = 0.67;
+    const xPixel = (position.x / 100) * img.naturalWidth * scaleFactor;
+    const yPixel = (position.y / 100) * img.naturalHeight * scaleFactor;
 
     return {
       left: `${xPixel}px`,
@@ -275,6 +276,7 @@ export function FoodAnalysisResults({
             src={imageData} 
             alt="Analyzed meal plate" 
             className="block"
+            style={{ width: '67%', height: 'auto' }}
             onLoad={handleImageLoad}
             data-testid="analyzed-image"
           />
