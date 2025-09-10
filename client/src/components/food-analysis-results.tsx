@@ -188,8 +188,14 @@ export function FoodAnalysisResults({
     const containerWidth = container.offsetWidth;
     const leftOffset = (containerWidth - displayedWidth) / 2;
     
-    const xPixel = leftOffset + (position.x / 100) * displayedWidth;
-    const yPixel = (position.y / 100) * displayedHeight;
+    // Calculate initial position
+    let xPixel = leftOffset + (position.x / 100) * displayedWidth;
+    let yPixel = (position.y / 100) * displayedHeight;
+    
+    // Ensure labels stay within image boundaries (with 16px margin for label radius)
+    const labelRadius = 16;
+    xPixel = Math.max(leftOffset + labelRadius, Math.min(xPixel, leftOffset + displayedWidth - labelRadius));
+    yPixel = Math.max(labelRadius, Math.min(yPixel, displayedHeight - labelRadius));
 
     return {
       left: `${xPixel}px`,
