@@ -278,36 +278,6 @@ export function FoodAnalysisResults({
             data-testid="analyzed-image"
           />
         
-          {/* Annotation Overlays */}
-          <svg 
-            className="absolute inset-0 w-full h-full pointer-events-none" 
-            viewBox="0 0 100 100"
-            preserveAspectRatio="none"
-          >
-          {analysisResult.food_items.map((item, index) => (
-            item.position && (
-              <g key={index}>
-                {/* Annotation line */}
-                <line
-                  x1={item.position.x}
-                  y1={item.position.y}
-                  x2={item.position.x + (index % 2 === 0 ? -10 : 10)}
-                  y2={item.position.y - 10}
-                  stroke={getDietaryColor(item.dietary_classification)}
-                  strokeWidth="0.5"
-                  strokeDasharray="2,2"
-                />
-                {/* Annotation point */}
-                <circle
-                  cx={item.position.x}
-                  cy={item.position.y}
-                  r="1"
-                  fill={getDietaryColor(item.dietary_classification)}
-                />
-              </g>
-            )
-          ))}
-          </svg>
         
           {/* Food Labels */}
           {analysisResult.food_items.map((item, index) => {
