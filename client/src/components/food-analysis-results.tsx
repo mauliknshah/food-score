@@ -257,8 +257,8 @@ export function FoodAnalysisResults({
                 <line
                   x1={item.position.x}
                   y1={item.position.y}
-                  x2={item.position.x + (index % 2 === 0 ? -10 : 10)}
-                  y2={item.position.y - 10}
+                  x2={item.position.x + (index % 2 === 0 ? 10 : -10)}
+                  y2={item.position.y + 10}
                   stroke={getDietaryColor(item.dietary_classification)}
                   strokeWidth="0.5"
                   strokeDasharray="2,2"
