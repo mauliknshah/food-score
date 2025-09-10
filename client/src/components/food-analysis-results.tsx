@@ -171,31 +171,13 @@ export function FoodAnalysisResults({
   };
 
   const getAdjustedPosition = (position: { x: number; y: number }) => {
-    if (!imageRef.current || !imageContainerRef.current) {
+    if (imageDisplayDimensions.width === 0 || imageDisplayDimensions.height === 0) {
       return { left: `${position.x}%`, top: `${position.y}%` };
     }
 
-    // Image is scaled to 67% of original size and centered
-    const img = imageRef.current;
-    const container = imageContainerRef.current;
-    const scaleFactor = 0.67;
-    
-    // Calculate the displayed image dimensions
-    const displayedWidth = img.naturalWidth * scaleFactor;
-    const displayedHeight = img.naturalHeight * scaleFactor;
-    
-    // Calculate the offset to center the image horizontally
-    const containerWidth = container.offsetWidth;
-    const leftOffset = (containerWidth - displayedWidth) / 2;
-    
-    // Calculate initial position
-    let xPixel = leftOffset + (position.x / 100) * displayedWidth;
-    let yPixel = (position.y / 100) * displayedHeight - 20; // Move labels up by 20px
-    
-    // Ensure labels stay within image boundaries (with 16px margin for label radius)
-    const labelRadius = 16;
-    xPixel = Math.max(leftOffset + labelRadius, Math.min(xPixel, leftOffset + displayedWidth - labelRadius));
-    yPixel = Math.max(labelRadius, Math.min(yPixel, displayedHeight - labelRadius));
+    // Convert AI percentage coordinates to actual pixel positions on displayed image
+    const xPixel = (position.x / 100) * imageDisplayDimensions.width;
+    const yPixel = (position.y / 100) * imageDisplayDimensions.height;
 
     return {
       left: `${xPixel}px`,
@@ -291,8 +273,7 @@ export function FoodAnalysisResults({
             ref={imageRef}
             src={imageData} 
             alt="Analyzed meal plate" 
-            className="block mx-auto"
-            style={{ width: '67%', height: 'auto' }}
+            className="w-full h-auto max-h-96 object-contain"
             onLoad={handleImageLoad}
             data-testid="analyzed-image"
           />
