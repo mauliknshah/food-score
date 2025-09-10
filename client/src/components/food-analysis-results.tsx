@@ -337,10 +337,6 @@ export function FoodAnalysisResults({
               data-testid={`food-item-${index}`}
             >
               <div className="flex items-center space-x-3">
-                <div
-                  className="w-6 h-6 rounded-full"
-                  style={{ backgroundColor: getDietaryColor(item.dietary_classification) }}
-                ></div>
                 <div>
                   <p className="text-sm font-medium text-foreground">
                     <span className="inline-flex items-center justify-center w-5 h-5 rounded-full text-xs font-bold text-white mr-2" 
