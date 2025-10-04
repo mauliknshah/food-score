@@ -1,7 +1,9 @@
 from flask import Flask, render_template_string, request, jsonify
 import os
+import concurrent.futures
 from food_segmentation_agent import FoodSegmentationAgent
 from nutrition_agent import NutritionAgent
+from ingredient_agent import IngredientAgent
 
 app = Flask(__name__)
 
@@ -21,6 +23,14 @@ try:
 except ValueError as e:
     print(f"Warning: Could not initialize nutrition agent - {e}")
     nutrition_agent = None
+
+# Initialize the ingredient agent
+try:
+    ingredient_agent = IngredientAgent()
+    print("Ingredient Agent initialized successfully!")
+except ValueError as e:
+    print(f"Warning: Could not initialize ingredient agent - {e}")
+    ingredient_agent = None
 
 HTML_TEMPLATE = """
 <!DOCTYPE html>
@@ -270,6 +280,62 @@ HTML_TEMPLATE = """
             font-weight: 600;
         }
 
+        .diet-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .diet-vegan {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .diet-vegetarian {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .diet-pescatarian {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+
+        .diet-meat {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .ingredients-section {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid #eee;
+        }
+
+        .ingredients-title {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #667eea;
+            margin-bottom: 6px;
+        }
+
+        .ingredients-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .ingredient-tag {
+            background: #f0f3ff;
+            color: #667eea;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+        }
+
 
         .loading {
             text-align: center;
@@ -455,6 +521,19 @@ HTML_TEMPLATE = """
                         </div>
                 `;
 
+                // Add diet badge if ingredients info is available
+                if (item.ingredients_info && item.ingredients_info.diet) {
+                    const dietType = item.ingredients_info.diet.toLowerCase();
+                    const dietEmojis = {
+                        'vegan': '🌱',
+                        'vegetarian': '🥬',
+                        'pescatarian': '🐟',
+                        'meat': '🍖'
+                    };
+                    const emoji = dietEmojis[dietType] || '';
+                    html += `<div class="diet-badge diet-${dietType}">${emoji} ${item.ingredients_info.diet}</div>`;
+                }
+
                 // Add nutrition information if available
                 if (item.nutrition) {
                     html += `<div class="nutrition-info">`;
@@ -502,6 +581,24 @@ HTML_TEMPLATE = """
                     html += `</div>`;
                 }
 
+                // Add ingredients section if available
+                if (item.ingredients_info && item.ingredients_info.ingredients) {
+                    html += `
+                        <div class="ingredients-section">
+                            <div class="ingredients-title">Ingredients:</div>
+                            <div class="ingredients-list">
+                    `;
+
+                    item.ingredients_info.ingredients.forEach(ingredient => {
+                        html += `<span class="ingredient-tag">${ingredient}</span>`;
+                    });
+
+                    html += `
+                            </div>
+                        </div>
+                    `;
+                }
+
                 html += `</div>`;
             });
 
@@ -525,6 +622,9 @@ def analyze():
     if not nutrition_agent:
         return jsonify({'error': 'Nutrition agent not initialized. Please set ANTHROPIC_API_KEY environment variable.'}), 500
 
+    if not ingredient_agent:
+        return jsonify({'error': 'Ingredient agent not initialized. Please set ANTHROPIC_API_KEY environment variable.'}), 500
+
     if 'image' not in request.files:
         return jsonify({'error': 'No image provided'}), 400
 
@@ -545,23 +645,33 @@ def analyze():
         if 'error' in segmentation_result:
             return jsonify(segmentation_result), 500
 
-        # Step 2: Get nutrition information for each food item
+        # Step 2: Get nutrition and ingredient information for each food item
         food_items = segmentation_result.get('items', [])
 
         if not food_items:
             return jsonify(segmentation_result)
 
-        # Prepare input for nutrition agent: {food_name: weight_in_grams}
+        # Prepare inputs for agents
         nutrition_input = {item['food']: item['weight'] for item in food_items}
+        ingredient_input = [item['food'] for item in food_items]
 
-        # Get nutrition data
-        nutrition_data = nutrition_agent.estimate_nutrition(nutrition_input)
+        # Call both agents in parallel using ThreadPoolExecutor
+        with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
+            # Submit both tasks
+            nutrition_future = executor.submit(nutrition_agent.estimate_nutrition, nutrition_input)
+            ingredient_future = executor.submit(ingredient_agent.analyze_ingredients, ingredient_input)
 
-        # Combine segmentation and nutrition data
+            # Get results
+            nutrition_data = nutrition_future.result()
+            ingredient_data = ingredient_future.result()
+
+        # Combine segmentation, nutrition, and ingredient data
         for item in food_items:
             food_name = item['food']
             if food_name in nutrition_data:
                 item['nutrition'] = nutrition_data[food_name]
+            if food_name in ingredient_data:
+                item['ingredients_info'] = ingredient_data[food_name]
 
         return jsonify(segmentation_result)
 
