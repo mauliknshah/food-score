@@ -224,6 +224,129 @@ HTML_TEMPLATE = """
             margin-bottom: 15px;
         }
 
+        .summary-section {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .summary-title {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .summary-ghg {
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            color: white;
+            text-align: center;
+        }
+
+        .summary-ghg.ghg-low {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        }
+
+        .summary-ghg.ghg-medium {
+            background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);
+        }
+
+        .summary-ghg.ghg-high {
+            background: linear-gradient(135deg, #fd7e14 0%, #dc3545 100%);
+        }
+
+        .summary-ghg.ghg-very-high {
+            background: linear-gradient(135deg, #dc3545 0%, #bd2130 100%);
+        }
+
+        .summary-ghg-label {
+            font-size: 0.9rem;
+            opacity: 0.9;
+            margin-bottom: 5px;
+        }
+
+        .summary-ghg-value {
+            font-size: 1.8rem;
+            font-weight: 700;
+        }
+
+        .summary-ghg-breakdown {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin-top: 10px;
+            font-size: 0.85rem;
+        }
+
+        .summary-nutrition {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .summary-nutrient {
+            background: #f8f9ff;
+            padding: 10px;
+            border-radius: 6px;
+            text-align: center;
+        }
+
+        .summary-nutrient-label {
+            font-size: 0.85rem;
+            color: #666;
+            margin-bottom: 4px;
+        }
+
+        .summary-nutrient-value {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #667eea;
+        }
+
+        .details-section {
+            margin-top: 20px;
+        }
+
+        .details-header {
+            background: #667eea;
+            color: white;
+            padding: 12px 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 600;
+            user-select: none;
+        }
+
+        .details-header:hover {
+            background: #5568d3;
+        }
+
+        .details-arrow {
+            transition: transform 0.3s ease;
+        }
+
+        .details-arrow.open {
+            transform: rotate(180deg);
+        }
+
+        .details-content {
+            margin-top: 10px;
+            display: none;
+        }
+
+        .details-content.show {
+            display: block;
+        }
+
         .food-item {
             background: white;
             border-radius: 8px;
@@ -616,7 +739,136 @@ HTML_TEMPLATE = """
                 return;
             }
 
-            let html = '';
+            // Calculate totals
+            let totalCO2e = 0;
+            let totalCO2 = 0;
+            let totalMethane = 0;
+            let totalN2O = 0;
+            let totalCalories = 0;
+            let avgCO2ePerKg = 0;
+            let itemCount = 0;
+
+            const nutrients = {
+                protein: 0, fat: 0, carbohydrates: 0, fiber: 0, sugar: 0,
+                sodium: 0, potassium: 0, vitamin_a: 0, vitamin_c: 0,
+                vitamin_d: 0, calcium: 0, iron: 0, vitamin_b12: 0
+            };
+
+            data.items.forEach(item => {
+                if (item.ghg_emission) {
+                    totalCO2e += item.ghg_emission.co2_equivalent_kg || 0;
+                    totalCO2 += item.ghg_emission.co2_kg || 0;
+                    totalMethane += item.ghg_emission.methane_kg || 0;
+                    totalN2O += item.ghg_emission.nitrous_oxide_kg || 0;
+                    if (item.ghg_emission.co2e_per_kg_food) {
+                        avgCO2ePerKg += item.ghg_emission.co2e_per_kg_food;
+                        itemCount++;
+                    }
+                }
+                if (item.nutrition) {
+                    totalCalories += item.nutrition.calories || 0;
+                    if (item.nutrition.daily_value_percentages) {
+                        Object.keys(nutrients).forEach(key => {
+                            nutrients[key] += item.nutrition.daily_value_percentages[key] || 0;
+                        });
+                    }
+                }
+            });
+
+            // Calculate average CO2e per kg and determine category
+            avgCO2ePerKg = itemCount > 0 ? avgCO2ePerKg / itemCount : 0;
+            let ghgCategory = 'low';
+            if (avgCO2ePerKg > 8) ghgCategory = 'very-high';
+            else if (avgCO2ePerKg > 4) ghgCategory = 'high';
+            else if (avgCO2ePerKg > 2) ghgCategory = 'medium';
+
+            // Build summary section
+            let html = `
+                <div class="summary-section">
+                    <div class="summary-title">📊 Overall Impact Summary</div>
+
+                    <div class="summary-ghg ghg-${ghgCategory}">
+                        <div class="summary-ghg-label">🌍 Total Greenhouse Gas Emissions</div>
+                        <div class="summary-ghg-value">${totalCO2e.toFixed(3)} kg CO₂e</div>
+                        <div style="font-size: 0.85rem; opacity: 0.9; margin-top: 4px;">
+                            Average: ${avgCO2ePerKg.toFixed(1)} kg CO₂e/kg
+                        </div>
+                        <div class="summary-ghg-breakdown">
+                            <div>CO₂: ${totalCO2.toFixed(3)} kg</div>
+                            <div>CH₄: ${totalMethane.toFixed(4)} kg</div>
+                            <div>N₂O: ${totalN2O.toFixed(5)} kg</div>
+                        </div>
+                    </div>
+
+                    <div class="summary-nutrition">
+                        <div class="summary-nutrient">
+                            <div class="summary-nutrient-label">🔥 Calories</div>
+                            <div class="summary-nutrient-value">${totalCalories.toFixed(0)} kcal</div>
+                        </div>
+                        <div class="summary-nutrient">
+                            <div class="summary-nutrient-label">Protein</div>
+                            <div class="summary-nutrient-value">${nutrients.protein.toFixed(0)}%</div>
+                        </div>
+                        <div class="summary-nutrient">
+                            <div class="summary-nutrient-label">Fat</div>
+                            <div class="summary-nutrient-value">${nutrients.fat.toFixed(0)}%</div>
+                        </div>
+                        <div class="summary-nutrient">
+                            <div class="summary-nutrient-label">Carbs</div>
+                            <div class="summary-nutrient-value">${nutrients.carbohydrates.toFixed(0)}%</div>
+                        </div>
+                        <div class="summary-nutrient">
+                            <div class="summary-nutrient-label">Fiber</div>
+                            <div class="summary-nutrient-value">${nutrients.fiber.toFixed(0)}%</div>
+                        </div>
+                        <div class="summary-nutrient">
+                            <div class="summary-nutrient-label">Sugar</div>
+                            <div class="summary-nutrient-value">${nutrients.sugar.toFixed(0)}%</div>
+                        </div>
+                        <div class="summary-nutrient">
+                            <div class="summary-nutrient-label">Sodium</div>
+                            <div class="summary-nutrient-value">${nutrients.sodium.toFixed(0)}%</div>
+                        </div>
+                        <div class="summary-nutrient">
+                            <div class="summary-nutrient-label">Potassium</div>
+                            <div class="summary-nutrient-value">${nutrients.potassium.toFixed(0)}%</div>
+                        </div>
+                        <div class="summary-nutrient">
+                            <div class="summary-nutrient-label">Vitamin A</div>
+                            <div class="summary-nutrient-value">${nutrients.vitamin_a.toFixed(0)}%</div>
+                        </div>
+                        <div class="summary-nutrient">
+                            <div class="summary-nutrient-label">Vitamin C</div>
+                            <div class="summary-nutrient-value">${nutrients.vitamin_c.toFixed(0)}%</div>
+                        </div>
+                        <div class="summary-nutrient">
+                            <div class="summary-nutrient-label">Vitamin D</div>
+                            <div class="summary-nutrient-value">${nutrients.vitamin_d.toFixed(0)}%</div>
+                        </div>
+                        <div class="summary-nutrient">
+                            <div class="summary-nutrient-label">Calcium</div>
+                            <div class="summary-nutrient-value">${nutrients.calcium.toFixed(0)}%</div>
+                        </div>
+                        <div class="summary-nutrient">
+                            <div class="summary-nutrient-label">Iron</div>
+                            <div class="summary-nutrient-value">${nutrients.iron.toFixed(0)}%</div>
+                        </div>
+                        <div class="summary-nutrient">
+                            <div class="summary-nutrient-label">Vitamin B12</div>
+                            <div class="summary-nutrient-value">${nutrients.vitamin_b12.toFixed(0)}%</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="details-section">
+                    <div class="details-header" onclick="toggleDetails()">
+                        <span>📋 Details (${data.items.length} items)</span>
+                        <span class="details-arrow" id="detailsArrow">▼</span>
+                    </div>
+                    <div class="details-content" id="detailsContent">
+            `;
+
+            // Add individual food items
             data.items.forEach(item => {
                 html += `
                     <div class="food-item">
@@ -744,7 +996,26 @@ HTML_TEMPLATE = """
                 html += `</div>`;
             });
 
+            // Close details section
+            html += `
+                    </div>
+                </div>
+            `;
+
             resultsContent.innerHTML = html;
+        }
+
+        function toggleDetails() {
+            const detailsContent = document.getElementById('detailsContent');
+            const detailsArrow = document.getElementById('detailsArrow');
+
+            if (detailsContent.classList.contains('show')) {
+                detailsContent.classList.remove('show');
+                detailsArrow.classList.remove('open');
+            } else {
+                detailsContent.classList.add('show');
+                detailsArrow.classList.add('open');
+            }
         }
     </script>
 </body>
