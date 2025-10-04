@@ -1,12 +1,7 @@
-import anthropic
 import base64
 import json
 from typing import Dict, List, Any
-import os
-from dotenv import load_dotenv
-
-# Load environment variables from .env file
-load_dotenv()
+from claude_service import get_claude_client, DEFAULT_MODEL
 
 
 class FoodSegmentationAgent:
@@ -19,11 +14,7 @@ class FoodSegmentationAgent:
         Args:
             api_key: Anthropic API key. If None, reads from ANTHROPIC_API_KEY env var.
         """
-        self.api_key = api_key or os.getenv('ANTHROPIC_API_KEY')
-        if not self.api_key:
-            raise ValueError("ANTHROPIC_API_KEY must be provided or set as environment variable")
-
-        self.client = anthropic.Anthropic(api_key=self.api_key)
+        self.client = get_claude_client(api_key)
 
     def encode_image(self, image_path: str) -> tuple[str, str]:
         """
@@ -114,7 +105,7 @@ Please provide your response in JSON format with the following structure:
 Be as accurate as possible with weight estimates based on standard portion sizes. If the image doesn't contain food, return an empty items array."""
 
         message = self.client.messages.create(
-            model="claude-sonnet-4-5-20250929",
+            model=DEFAULT_MODEL,
             max_tokens=2048,
             messages=[
                 {

@@ -1,11 +1,6 @@
-import anthropic
 import json
-import os
 from typing import Dict, List, Any
-from dotenv import load_dotenv
-
-# Load environment variables from .env file
-load_dotenv()
+from claude_service import get_claude_client, DEFAULT_MODEL
 
 
 class IngredientAgent:
@@ -18,11 +13,7 @@ class IngredientAgent:
         Args:
             api_key: Anthropic API key. If None, reads from ANTHROPIC_API_KEY env var.
         """
-        self.api_key = api_key or os.getenv('ANTHROPIC_API_KEY')
-        if not self.api_key:
-            raise ValueError("ANTHROPIC_API_KEY must be provided or set as environment variable")
-
-        self.client = anthropic.Anthropic(api_key=self.api_key)
+        self.client = get_claude_client(api_key)
 
     def analyze_ingredients(self, food_items: List[str]) -> Dict[str, Dict[str, Any]]:
         """
@@ -72,7 +63,7 @@ IMPORTANT:
 - Be specific with ingredient names (e.g., "all-purpose flour" not just "flour")"""
 
         message = self.client.messages.create(
-            model="claude-sonnet-4-5-20250929",
+            model=DEFAULT_MODEL,
             max_tokens=2048,
             messages=[
                 {"role": "user", "content": prompt}
