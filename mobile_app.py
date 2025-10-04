@@ -5,6 +5,7 @@ from food_segmentation_agent import FoodSegmentationAgent
 from nutrition_agent import NutritionAgent
 from ingredient_agent import IngredientAgent
 from ghg_emission_agent import GHGEmissionAgent
+from compassion_score_agent import CompassionScoreAgent
 
 app = Flask(__name__)
 
@@ -40,6 +41,14 @@ try:
 except ValueError as e:
     print(f"Warning: Could not initialize GHG emission agent - {e}")
     ghg_agent = None
+
+# Initialize the compassion score agent
+try:
+    compassion_agent = CompassionScoreAgent()
+    print("Compassion Score Agent initialized successfully!")
+except ValueError as e:
+    print(f"Warning: Could not initialize compassion score agent - {e}")
+    compassion_agent = None
 
 HTML_TEMPLATE = """
 <!DOCTYPE html>
@@ -281,6 +290,39 @@ HTML_TEMPLATE = """
             gap: 8px;
             margin-top: 10px;
             font-size: 0.85rem;
+        }
+
+        .summary-compassion {
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            color: white;
+            text-align: center;
+        }
+
+        .summary-compassion.compassion-low {
+            background: linear-gradient(135deg, #dc3545 0%, #bd2130 100%);
+        }
+
+        .summary-compassion.compassion-medium {
+            background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);
+        }
+
+        .summary-compassion.compassion-positive {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        }
+
+        .summary-compassion-label {
+            font-size: 0.9rem;
+            opacity: 0.9;
+            margin-bottom: 5px;
+            color: white;
+        }
+
+        .summary-compassion-value {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: white;
         }
 
         .summary-nutrition {
@@ -537,6 +579,42 @@ HTML_TEMPLATE = """
             color: #721c24;
         }
 
+        .compassion-score {
+            background: #f0f3ff;
+            border-radius: 6px;
+            padding: 10px 12px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .compassion-label {
+            font-size: 0.9rem;
+            color: #555;
+            font-weight: 600;
+        }
+
+        .compassion-value {
+            font-size: 1.1rem;
+            font-weight: 700;
+        }
+
+        .compassion-positive {
+            color: #28a745;
+        }
+
+        .compassion-negative {
+            color: #dc3545;
+        }
+
+        .compassion-reasoning {
+            font-size: 0.8rem;
+            color: #666;
+            margin-top: 4px;
+            font-style: italic;
+        }
+
         .ingredients-section {
             margin-top: 10px;
             padding-top: 10px;
@@ -747,6 +825,8 @@ HTML_TEMPLATE = """
             let totalCalories = 0;
             let avgCO2ePerKg = 0;
             let itemCount = 0;
+            let totalCompassionScore = 0;
+            let totalWeight = 0;
 
             const nutrients = {
                 protein: 0, fat: 0, carbohydrates: 0, fiber: 0, sugar: 0,
@@ -773,6 +853,13 @@ HTML_TEMPLATE = """
                         });
                     }
                 }
+                if (item.compassion_score) {
+                    const weight = item.weight || 0;
+                    const score = item.compassion_score.compassion_score || 0;
+                    // Weighted compassion score: score * (weight / 1000) to normalize by kg
+                    totalCompassionScore += score * (weight / 100);
+                    totalWeight += weight;
+                }
             });
 
             // Calculate average CO2e per kg and determine category
@@ -781,6 +868,16 @@ HTML_TEMPLATE = """
             if (avgCO2ePerKg > 8) ghgCategory = 'very-high';
             else if (avgCO2ePerKg > 4) ghgCategory = 'high';
             else if (avgCO2ePerKg > 2) ghgCategory = 'medium';
+
+            // Determine compassion category: < -3 is low, -3 to 0 is medium, >= 1 is positive
+            let compassionCategory = 'positive';
+            if (totalCompassionScore < -3) compassionCategory = 'low';
+            else if (totalCompassionScore < 1) compassionCategory = 'medium';
+
+            // Compassion message
+            let compassionMessage = 'Compassionate choice!';
+            if (compassionCategory === 'low') compassionMessage = 'High animal impact - consider alternatives';
+            else if (compassionCategory === 'medium') compassionMessage = 'Consider more plant-based options';
 
             // Build summary section
             let html = `
@@ -797,6 +894,14 @@ HTML_TEMPLATE = """
                             <div>CO₂: ${totalCO2.toFixed(3)} kg</div>
                             <div>CH₄: ${totalMethane.toFixed(4)} kg</div>
                             <div>N₂O: ${totalN2O.toFixed(5)} kg</div>
+                        </div>
+                    </div>
+
+                    <div class="summary-compassion compassion-${compassionCategory}">
+                        <div class="summary-compassion-label">💚 Compassion Score</div>
+                        <div class="summary-compassion-value">${totalCompassionScore.toFixed(1)}</div>
+                        <div style="font-size: 0.85rem; opacity: 0.9; margin-top: 4px; color: white;">
+                            ${compassionMessage}
                         </div>
                     </div>
 
@@ -911,6 +1016,25 @@ HTML_TEMPLATE = """
                                     <span class="ghg-component-value">${n2o.toFixed(5)} kg</span>
                                 </div>
                             </div>
+                        </div>
+                    `;
+                }
+
+                // Add compassion score if available
+                if (item.compassion_score) {
+                    const score = item.compassion_score.compassion_score;
+                    const weight = item.weight || 0;
+                    const weightedScore = (score * (weight / 100)).toFixed(1);
+                    const scoreClass = score >= 0 ? 'compassion-positive' : 'compassion-negative';
+                    const reasoning = item.compassion_score.reasoning || '';
+
+                    html += `
+                        <div class="compassion-score">
+                            <div>
+                                <div class="compassion-label">💚 Compassion Score</div>
+                                ${reasoning ? `<div class="compassion-reasoning">${reasoning}</div>` : ''}
+                            </div>
+                            <div class="compassion-value ${scoreClass}">${weightedScore}</div>
                         </div>
                     `;
                 }
@@ -1041,6 +1165,9 @@ def analyze():
     if not ghg_agent:
         return jsonify({'error': 'GHG emission agent not initialized. Please set ANTHROPIC_API_KEY environment variable.'}), 500
 
+    if not compassion_agent:
+        return jsonify({'error': 'Compassion score agent not initialized. Please set ANTHROPIC_API_KEY environment variable.'}), 500
+
     if 'image' not in request.files:
         return jsonify({'error': 'No image provided'}), 400
 
@@ -1071,20 +1198,23 @@ def analyze():
         nutrition_input = {item['food']: item['weight'] for item in food_items}
         ingredient_input = [item['food'] for item in food_items]
         ghg_input = {item['food']: item['weight'] for item in food_items}
+        compassion_input = {item['food']: item['weight'] for item in food_items}
 
-        # Call all three agents in parallel using ThreadPoolExecutor
-        with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
+        # Call all four agents in parallel using ThreadPoolExecutor
+        with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
             # Submit all tasks
             nutrition_future = executor.submit(nutrition_agent.estimate_nutrition, nutrition_input)
             ingredient_future = executor.submit(ingredient_agent.analyze_ingredients, ingredient_input)
             ghg_future = executor.submit(ghg_agent.calculate_emissions, ghg_input)
+            compassion_future = executor.submit(compassion_agent.calculate_scores, compassion_input)
 
             # Get results
             nutrition_data = nutrition_future.result()
             ingredient_data = ingredient_future.result()
             ghg_data = ghg_future.result()
+            compassion_data = compassion_future.result()
 
-        # Combine segmentation, nutrition, ingredient, and GHG data
+        # Combine segmentation, nutrition, ingredient, GHG, and compassion data
         for item in food_items:
             food_name = item['food']
             if food_name in nutrition_data:
@@ -1093,6 +1223,8 @@ def analyze():
                 item['ingredients_info'] = ingredient_data[food_name]
             if food_name in ghg_data:
                 item['ghg_emission'] = ghg_data[food_name]
+            if food_name in compassion_data:
+                item['compassion_score'] = compassion_data[food_name]
 
         return jsonify(segmentation_result)
 
