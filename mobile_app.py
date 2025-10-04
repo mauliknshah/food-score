@@ -4,6 +4,7 @@ import concurrent.futures
 from food_segmentation_agent import FoodSegmentationAgent
 from nutrition_agent import NutritionAgent
 from ingredient_agent import IngredientAgent
+from ghg_emission_agent import GHGEmissionAgent
 
 app = Flask(__name__)
 
@@ -31,6 +32,14 @@ try:
 except ValueError as e:
     print(f"Warning: Could not initialize ingredient agent - {e}")
     ingredient_agent = None
+
+# Initialize the GHG emission agent
+try:
+    ghg_agent = GHGEmissionAgent()
+    print("GHG Emission Agent initialized successfully!")
+except ValueError as e:
+    print(f"Warning: Could not initialize GHG emission agent - {e}")
+    ghg_agent = None
 
 HTML_TEMPLATE = """
 <!DOCTYPE html>
@@ -240,6 +249,102 @@ HTML_TEMPLATE = """
             color: #667eea;
             font-weight: 600;
             font-size: 1rem;
+        }
+
+        .ghg-emission {
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 10px;
+        }
+
+        .ghg-emission.ghg-low {
+            background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+        }
+
+        .ghg-emission.ghg-medium {
+            background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+        }
+
+        .ghg-emission.ghg-high {
+            background: linear-gradient(135deg, #ffe8d1 0%, #ffd7ba 100%);
+        }
+
+        .ghg-emission.ghg-very-high {
+            background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
+        }
+
+        .ghg-total {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .ghg-label {
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        .ghg-emission.ghg-low .ghg-label {
+            color: #155724;
+        }
+
+        .ghg-emission.ghg-medium .ghg-label {
+            color: #856404;
+        }
+
+        .ghg-emission.ghg-high .ghg-label {
+            color: #8b4513;
+        }
+
+        .ghg-emission.ghg-very-high .ghg-label {
+            color: #721c24;
+        }
+
+        .ghg-value {
+            font-size: 1rem;
+            font-weight: 700;
+        }
+
+        .ghg-emission.ghg-low .ghg-value {
+            color: #155724;
+        }
+
+        .ghg-emission.ghg-medium .ghg-value {
+            color: #856404;
+        }
+
+        .ghg-emission.ghg-high .ghg-value {
+            color: #8b4513;
+        }
+
+        .ghg-emission.ghg-very-high .ghg-value {
+            color: #721c24;
+        }
+
+        .ghg-breakdown {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 6px;
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px solid rgba(0,0,0,0.1);
+        }
+
+        .ghg-component {
+            text-align: center;
+            font-size: 0.75rem;
+        }
+
+        .ghg-component-label {
+            color: #777;
+            display: block;
+            margin-bottom: 2px;
+        }
+
+        .ghg-component-value {
+            font-weight: 600;
+            color: #333;
         }
 
         .nutrition-info {
@@ -521,6 +626,43 @@ HTML_TEMPLATE = """
                         </div>
                 `;
 
+                // Add GHG emission as the first item (if available)
+                if (item.ghg_emission) {
+                    const co2e = item.ghg_emission.co2_equivalent_kg;
+                    const co2 = item.ghg_emission.co2_kg;
+                    const methane = item.ghg_emission.methane_kg;
+                    const n2o = item.ghg_emission.nitrous_oxide_kg;
+                    const co2ePerKg = item.ghg_emission.co2e_per_kg_food;
+                    const category = item.ghg_emission.emission_category;
+                    const categoryClass = `ghg-${category.replace('_', '-')}`;
+
+                    html += `
+                        <div class="ghg-emission ${categoryClass}">
+                            <div class="ghg-total">
+                                <span class="ghg-label">🌍 Total GHG Impact:</span>
+                                <span class="ghg-value">${co2e.toFixed(3)} kg CO₂e</span>
+                            </div>
+                            <div style="font-size: 0.8rem; color: #666; margin-bottom: 6px;">
+                                (${co2ePerKg.toFixed(1)} kg CO₂e per kg of food)
+                            </div>
+                            <div class="ghg-breakdown">
+                                <div class="ghg-component">
+                                    <span class="ghg-component-label">CO₂</span>
+                                    <span class="ghg-component-value">${co2.toFixed(3)} kg</span>
+                                </div>
+                                <div class="ghg-component">
+                                    <span class="ghg-component-label">Methane (CH₄)</span>
+                                    <span class="ghg-component-value">${methane.toFixed(4)} kg</span>
+                                </div>
+                                <div class="ghg-component">
+                                    <span class="ghg-component-label">N₂O</span>
+                                    <span class="ghg-component-value">${n2o.toFixed(5)} kg</span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+
                 // Add diet badge if ingredients info is available
                 if (item.ingredients_info && item.ingredients_info.diet) {
                     const dietType = item.ingredients_info.diet.toLowerCase();
@@ -625,6 +767,9 @@ def analyze():
     if not ingredient_agent:
         return jsonify({'error': 'Ingredient agent not initialized. Please set ANTHROPIC_API_KEY environment variable.'}), 500
 
+    if not ghg_agent:
+        return jsonify({'error': 'GHG emission agent not initialized. Please set ANTHROPIC_API_KEY environment variable.'}), 500
+
     if 'image' not in request.files:
         return jsonify({'error': 'No image provided'}), 400
 
@@ -654,24 +799,29 @@ def analyze():
         # Prepare inputs for agents
         nutrition_input = {item['food']: item['weight'] for item in food_items}
         ingredient_input = [item['food'] for item in food_items]
+        ghg_input = {item['food']: item['weight'] for item in food_items}
 
-        # Call both agents in parallel using ThreadPoolExecutor
-        with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
-            # Submit both tasks
+        # Call all three agents in parallel using ThreadPoolExecutor
+        with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
+            # Submit all tasks
             nutrition_future = executor.submit(nutrition_agent.estimate_nutrition, nutrition_input)
             ingredient_future = executor.submit(ingredient_agent.analyze_ingredients, ingredient_input)
+            ghg_future = executor.submit(ghg_agent.calculate_emissions, ghg_input)
 
             # Get results
             nutrition_data = nutrition_future.result()
             ingredient_data = ingredient_future.result()
+            ghg_data = ghg_future.result()
 
-        # Combine segmentation, nutrition, and ingredient data
+        # Combine segmentation, nutrition, ingredient, and GHG data
         for item in food_items:
             food_name = item['food']
             if food_name in nutrition_data:
                 item['nutrition'] = nutrition_data[food_name]
             if food_name in ingredient_data:
                 item['ingredients_info'] = ingredient_data[food_name]
+            if food_name in ghg_data:
+                item['ghg_emission'] = ghg_data[food_name]
 
         return jsonify(segmentation_result)
 
