@@ -2,6 +2,10 @@
 
 A comprehensive food analysis application that evaluates your meals across multiple dimensions: nutrition, environmental impact, animal welfare, and dietary preferences. Using AI-powered agents, Food-Score provides detailed insights to help you make informed, sustainable, and compassionate food choices.
 
+![Take/Upload the image](1.png)
+![Show overall scores](2.png)
+![Show detailes](3.png)
+
 ## Features
 
 ### 📊 Multi-Dimensional Food Analysis
