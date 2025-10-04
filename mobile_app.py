@@ -1,17 +1,26 @@
 from flask import Flask, render_template_string, request, jsonify
 import os
 from food_segmentation_agent import FoodSegmentationAgent
+from nutrition_agent import NutritionAgent
 
 app = Flask(__name__)
 
 # Initialize the food segmentation agent
 try:
-    agent = FoodSegmentationAgent()
+    segmentation_agent = FoodSegmentationAgent()
     print("Food Segmentation Agent initialized successfully!")
 except ValueError as e:
-    print(f"Warning: Could not initialize agent - {e}")
+    print(f"Warning: Could not initialize segmentation agent - {e}")
     print("Set ANTHROPIC_API_KEY environment variable to enable food analysis")
-    agent = None
+    segmentation_agent = None
+
+# Initialize the nutrition agent
+try:
+    nutrition_agent = NutritionAgent()
+    print("Nutrition Agent initialized successfully!")
+except ValueError as e:
+    print(f"Warning: Could not initialize nutrition agent - {e}")
+    nutrition_agent = None
 
 HTML_TEMPLATE = """
 <!DOCTYPE html>
@@ -208,7 +217,7 @@ HTML_TEMPLATE = """
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 8px;
+            margin-bottom: 12px;
         }
 
         .food-name {
@@ -221,6 +230,44 @@ HTML_TEMPLATE = """
             color: #667eea;
             font-weight: 600;
             font-size: 1rem;
+        }
+
+        .nutrition-info {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid #eee;
+        }
+
+        .calories {
+            font-size: 0.95rem;
+            color: #ff6b6b;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .daily-values {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+            font-size: 0.85rem;
+        }
+
+        .nutrient {
+            display: flex;
+            justify-content: space-between;
+            padding: 4px 8px;
+            background: #f8f9ff;
+            border-radius: 4px;
+        }
+
+        .nutrient-name {
+            color: #666;
+            text-transform: capitalize;
+        }
+
+        .nutrient-value {
+            color: #667eea;
+            font-weight: 600;
         }
 
 
@@ -406,8 +453,56 @@ HTML_TEMPLATE = """
                             <div class="food-name">${item.food}</div>
                             <div class="food-weight">${item.weight}g</div>
                         </div>
-                    </div>
                 `;
+
+                // Add nutrition information if available
+                if (item.nutrition) {
+                    html += `<div class="nutrition-info">`;
+
+                    // Calories
+                    if (item.nutrition.calories) {
+                        html += `<div class="calories">🔥 ${item.nutrition.calories} kcal</div>`;
+                    }
+
+                    // Daily value percentages
+                    if (item.nutrition.daily_value_percentages) {
+                        html += `<div class="daily-values">`;
+
+                        const dvp = item.nutrition.daily_value_percentages;
+                        const nutrients = [
+                            { key: 'protein', label: 'Protein' },
+                            { key: 'fat', label: 'Fat' },
+                            { key: 'carbohydrates', label: 'Carbs' },
+                            { key: 'fiber', label: 'Fiber' },
+                            { key: 'sugar', label: 'Sugar' },
+                            { key: 'sodium', label: 'Sodium' },
+                            { key: 'potassium', label: 'Potassium' },
+                            { key: 'vitamin_a', label: 'Vit A' },
+                            { key: 'vitamin_c', label: 'Vit C' },
+                            { key: 'vitamin_d', label: 'Vit D' },
+                            { key: 'calcium', label: 'Calcium' },
+                            { key: 'iron', label: 'Iron' },
+                            { key: 'vitamin_b12', label: 'Vit B12' }
+                        ];
+
+                        nutrients.forEach(nutrient => {
+                            if (dvp[nutrient.key] !== undefined) {
+                                html += `
+                                    <div class="nutrient">
+                                        <span class="nutrient-name">${nutrient.label}</span>
+                                        <span class="nutrient-value">${dvp[nutrient.key]}%</span>
+                                    </div>
+                                `;
+                            }
+                        });
+
+                        html += `</div>`;
+                    }
+
+                    html += `</div>`;
+                }
+
+                html += `</div>`;
             });
 
             resultsContent.innerHTML = html;
@@ -424,8 +519,11 @@ def index():
 @app.route('/analyze', methods=['POST'])
 def analyze():
     """Analyze uploaded food image using Claude."""
-    if not agent:
+    if not segmentation_agent:
         return jsonify({'error': 'Food analysis agent not initialized. Please set ANTHROPIC_API_KEY environment variable.'}), 500
+
+    if not nutrition_agent:
+        return jsonify({'error': 'Nutrition agent not initialized. Please set ANTHROPIC_API_KEY environment variable.'}), 500
 
     if 'image' not in request.files:
         return jsonify({'error': 'No image provided'}), 400
@@ -438,13 +536,34 @@ def analyze():
         # Read image bytes
         image_bytes = file.read()
 
-        # Analyze the food plate
-        result = agent.analyze_food_plate(
+        # Step 1: Analyze the food plate using segmentation agent
+        segmentation_result = segmentation_agent.analyze_food_plate(
             image_bytes=image_bytes,
             filename=file.filename
         )
 
-        return jsonify(result)
+        if 'error' in segmentation_result:
+            return jsonify(segmentation_result), 500
+
+        # Step 2: Get nutrition information for each food item
+        food_items = segmentation_result.get('items', [])
+
+        if not food_items:
+            return jsonify(segmentation_result)
+
+        # Prepare input for nutrition agent: {food_name: weight_in_grams}
+        nutrition_input = {item['food']: item['weight'] for item in food_items}
+
+        # Get nutrition data
+        nutrition_data = nutrition_agent.estimate_nutrition(nutrition_input)
+
+        # Combine segmentation and nutrition data
+        for item in food_items:
+            food_name = item['food']
+            if food_name in nutrition_data:
+                item['nutrition'] = nutrition_data[food_name]
+
+        return jsonify(segmentation_result)
 
     except Exception as e:
         return jsonify({'error': f'Failed to analyze image: {str(e)}'}), 500
