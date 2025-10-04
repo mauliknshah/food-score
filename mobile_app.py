@@ -1,7 +1,17 @@
 from flask import Flask, render_template_string, request, jsonify
 import os
+from food_segmentation_agent import FoodSegmentationAgent
 
 app = Flask(__name__)
+
+# Initialize the food segmentation agent
+try:
+    agent = FoodSegmentationAgent()
+    print("Food Segmentation Agent initialized successfully!")
+except ValueError as e:
+    print(f"Warning: Could not initialize agent - {e}")
+    print("Set ANTHROPIC_API_KEY environment variable to enable food analysis")
+    agent = None
 
 HTML_TEMPLATE = """
 <!DOCTYPE html>
@@ -134,6 +144,101 @@ HTML_TEMPLATE = """
             text-align: center;
         }
 
+        .analyze-btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            margin-top: 15px;
+            display: none;
+        }
+
+        .analyze-btn.show {
+            display: block;
+        }
+
+        .analyze-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(17, 153, 142, 0.4);
+        }
+
+        .analyze-btn:active {
+            transform: translateY(0);
+        }
+
+        .analyze-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .results-area {
+            margin-top: 20px;
+            display: none;
+            background: #f8f9ff;
+            border-radius: 10px;
+            padding: 20px;
+        }
+
+        .results-area.show {
+            display: block;
+        }
+
+        .results-title {
+            color: #667eea;
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin-bottom: 15px;
+        }
+
+        .food-item {
+            background: white;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+
+        .food-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .food-name {
+            font-weight: 600;
+            color: #333;
+            font-size: 1.1rem;
+        }
+
+        .food-weight {
+            color: #667eea;
+            font-weight: 600;
+            font-size: 1rem;
+        }
+
+
+        .loading {
+            text-align: center;
+            color: #667eea;
+            font-size: 1rem;
+            padding: 20px;
+        }
+
+        .error {
+            background: #fee;
+            color: #c33;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+        }
+
         @media (max-width: 480px) {
             h1 {
                 font-size: 2rem;
@@ -168,6 +273,15 @@ HTML_TEMPLATE = """
         <div class="preview-area" id="previewArea">
             <img id="previewImage" class="preview-image" alt="Preview">
             <div class="file-info" id="fileInfo"></div>
+            <button class="analyze-btn" id="analyzeBtn">
+                <span>🔍</span>
+                <span>Analyze Food</span>
+            </button>
+        </div>
+
+        <div class="results-area" id="resultsArea">
+            <div class="results-title">Food Analysis Results</div>
+            <div id="resultsContent"></div>
         </div>
     </div>
 
@@ -178,6 +292,11 @@ HTML_TEMPLATE = """
         const previewArea = document.getElementById('previewArea');
         const previewImage = document.getElementById('previewImage');
         const fileInfo = document.getElementById('fileInfo');
+        const analyzeBtn = document.getElementById('analyzeBtn');
+        const resultsArea = document.getElementById('resultsArea');
+        const resultsContent = document.getElementById('resultsContent');
+
+        let currentFile = null;
 
         // Upload area click
         uploadArea.addEventListener('click', () => {
@@ -227,15 +346,71 @@ HTML_TEMPLATE = """
                 return;
             }
 
+            currentFile = file;
+            resultsArea.classList.remove('show');
+
             const reader = new FileReader();
             reader.onload = (e) => {
                 previewImage.src = e.target.result;
                 previewArea.classList.add('show');
+                analyzeBtn.classList.add('show');
 
                 const sizeKB = (file.size / 1024).toFixed(2);
                 fileInfo.textContent = `${file.name} (${sizeKB} KB)`;
             };
             reader.readAsDataURL(file);
+        }
+
+        // Analyze button click
+        analyzeBtn.addEventListener('click', async () => {
+            if (!currentFile) return;
+
+            analyzeBtn.disabled = true;
+            resultsContent.innerHTML = '<div class="loading">🔄 Analyzing your food plate...</div>';
+            resultsArea.classList.add('show');
+
+            const formData = new FormData();
+            formData.append('image', currentFile);
+
+            try {
+                const response = await fetch('/analyze', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (data.error) {
+                    resultsContent.innerHTML = `<div class="error">❌ ${data.error}</div>`;
+                } else {
+                    displayResults(data);
+                }
+            } catch (error) {
+                resultsContent.innerHTML = `<div class="error">❌ Failed to analyze image: ${error.message}</div>`;
+            } finally {
+                analyzeBtn.disabled = false;
+            }
+        });
+
+        function displayResults(data) {
+            if (!data.items || data.items.length === 0) {
+                resultsContent.innerHTML = '<div class="error">No food items detected in the image.</div>';
+                return;
+            }
+
+            let html = '';
+            data.items.forEach(item => {
+                html += `
+                    <div class="food-item">
+                        <div class="food-item-header">
+                            <div class="food-name">${item.name}</div>
+                            <div class="food-weight">${item.weight_grams}g</div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            resultsContent.innerHTML = html;
         }
     </script>
 </body>
@@ -246,8 +421,12 @@ HTML_TEMPLATE = """
 def index():
     return render_template_string(HTML_TEMPLATE)
 
-@app.route('/upload', methods=['POST'])
-def upload():
+@app.route('/analyze', methods=['POST'])
+def analyze():
+    """Analyze uploaded food image using Claude."""
+    if not agent:
+        return jsonify({'error': 'Food analysis agent not initialized. Please set ANTHROPIC_API_KEY environment variable.'}), 500
+
     if 'image' not in request.files:
         return jsonify({'error': 'No image provided'}), 400
 
@@ -255,8 +434,20 @@ def upload():
     if file.filename == '':
         return jsonify({'error': 'No file selected'}), 400
 
-    # Here you can add your image processing logic
-    return jsonify({'message': 'Image uploaded successfully', 'filename': file.filename})
+    try:
+        # Read image bytes
+        image_bytes = file.read()
+
+        # Analyze the food plate
+        result = agent.analyze_food_plate(
+            image_bytes=image_bytes,
+            filename=file.filename
+        )
+
+        return jsonify(result)
+
+    except Exception as e:
+        return jsonify({'error': f'Failed to analyze image: {str(e)}'}), 500
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8000, debug=True)
