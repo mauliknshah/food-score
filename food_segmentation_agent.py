@@ -105,8 +105,8 @@ Please provide your response in JSON format with the following structure:
 {
   "items": [
     {
-      "name": "<food name>",
-      "weight_grams": <estimated weight>
+      "food": "<food name>",
+      "weight": <estimated weight>
     }
   ]
 }

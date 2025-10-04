@@ -403,8 +403,8 @@ HTML_TEMPLATE = """
                 html += `
                     <div class="food-item">
                         <div class="food-item-header">
-                            <div class="food-name">${item.name}</div>
-                            <div class="food-weight">${item.weight_grams}g</div>
+                            <div class="food-name">${item.food}</div>
+                            <div class="food-weight">${item.weight}g</div>
                         </div>
                     </div>
                 `;
