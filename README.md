@@ -63,7 +63,7 @@ All agents leverage Claude AI with carefully crafted prompts for accurate analys
 ### Prerequisites
 
 - Python 3.8 or higher
-- pip (Python package manager)
+- Anaconda or Miniconda
 - Anthropic API key
 
 ### Step 1: Clone the Repository
@@ -73,7 +73,16 @@ git clone <repository-url>
 cd food-score
 ```
 
-### Step 2 Set Up Environment Variables
+### Step 2: Create Conda Environment
+
+Create and activate the conda environment from the provided `environment.yml` file:
+
+```bash
+conda env create -f environment.yml
+conda activate food-score
+```
+
+### Step 3: Set Up Environment Variables
 
 Create a `.env` file in the project root:
 
@@ -93,7 +102,7 @@ To get an Anthropic API key:
 3. Navigate to API Keys section
 4. Create a new API key
 
-### Step 3 Run the Application
+### Step 4: Run the Application
 
 ```bash
 python mobile_app.py
